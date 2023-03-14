@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ServiceWorker\ServiceWorker.csproj" />
+    <ProjectReference Include="..\shared\shared.csproj" />
   </ItemGroup>
 
 </Project>
