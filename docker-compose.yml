@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  booking:
+    image: jacobkaae/taxabooking-service:latest
+    hostname: "booking"
+    environment:
+      - FilePath=/srv/files
+      - IPadresse=172.18.0.4
+      - HostnameRabbit=rabbitmq-dev
+    ports:
+      - "5001:80"
+    networks:
+      - default
+    volumes:
+      - files:/srv/files
+    depends_on:
+      - rabbitmq
+
+  planning:
+    image: angus25/planning-service:latest
+    hostname: "planning"
+    environment:
+      - FilePath=/srv/files
+      - IPadresse=172.18.0.4
+      - HostnameRabbit=rabbitmq-dev
+    ports:
+      - "5002:80"
+    networks:
+      - default
+    volumes:
+      - files:/srv/files
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:management
+    hostname: "rabbitmq-dev"
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    networks:
+      - default
+
+volumes:
+  files:
+    external: false
+
+networks:
+  default:
+    driver: bridge
+    name: mitnet
