@@ -9,15 +9,19 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly string _filePath;
+    private readonly string _hostName;
+    private readonly string _AMQP_URL;
 
     public Worker(ILogger<Worker> logger, IConfiguration config)
     {
         _logger = logger;
-        // TODO
-        // Ændre "DESKTOP" til "FilePath"
+
         _filePath = config["FilePath"] ?? "/srv";
 
+        _hostName = config["HostnameRabbit"];
+    
         _logger.LogInformation($"Filepath: {_filePath}");
+        _logger.LogInformation($"Connection: {_hostName}");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -27,7 +31,7 @@ public class Worker : BackgroundService
             var factory = new ConnectionFactory
             {
                 // 172.17.0.2
-                HostName = "172.17.0.2"
+                HostName = _hostName
             };
             
             using var connection = factory.CreateConnection();
