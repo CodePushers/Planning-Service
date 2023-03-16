@@ -1,5 +1,5 @@
 ﻿using System;
-namespace shared
+namespace ServiceWorker
 {
 	public class PlanDTO
 	{
