@@ -59,7 +59,7 @@ public class Worker : BackgroundService
 
 
                 // Tjekker om filen eksisterer og om den er tom
-                if (!File.Exists(Path.Combine(_filePath, "planliste.csv")) || new FileInfo(Path.Combine(_filePath, "planliste.csv")).Length == 0)
+                if (!File.Exists(Path.Combine(_filePath, "planListe.csv")) || new FileInfo(Path.Combine(_filePath, "planListe.csv")).Length == 0)
                 {
                     // Skriver headeren til .CSV-filen
                     using (StreamWriter outputFile = new StreamWriter(Path.Combine(_filePath, "planListe.csv")))
