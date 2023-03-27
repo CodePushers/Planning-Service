@@ -40,7 +40,7 @@ public class Worker : BackgroundService
                                 autoDelete: false,
                                 arguments: null);
 
-        Console.WriteLine("[*] Waiting for messages.");
+        _logger.LogInformation("[*] Waiting for messages.");
 
         var consumer = new EventingBasicConsumer(channel);
 
@@ -54,7 +54,7 @@ public class Worker : BackgroundService
             // Deserialiserer det indsendte data om til C# objekt
             PlanDTO? plan = JsonSerializer.Deserialize<PlanDTO>(message);
 
-            Console.WriteLine($"[*] Plan modtaget:\n\tKundenavn: {plan.KundeNavn}\n\tStarttidspunkt: {plan.StartTidspunkt}\n\tStartsted: {plan.StartSted}\n\tEndested: {plan.SlutSted}");
+            _logger.LogInformation($"[*] Plan modtaget:\n\tKundenavn: {plan.KundeNavn}\n\tStarttidspunkt: {plan.StartTidspunkt}\n\tStartsted: {plan.StartSted}\n\tEndested: {plan.SlutSted}");
 
             // Tjekker om filen eksisterer og om den er tom
             if (!File.Exists(Path.Combine(_filePath, "planListe.csv")) || new FileInfo(Path.Combine(_filePath, "planListe.csv")).Length == 0)
