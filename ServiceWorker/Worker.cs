@@ -20,6 +20,11 @@ public class Worker : BackgroundService
     
         _logger.LogInformation($"Filepath: {_filePath}");
         _logger.LogInformation($"Connection: {_hostName}");
+
+        var hostName = System.Net.Dns.GetHostName();
+        var ips = System.Net.Dns.GetHostAddresses(hostName);
+        var _ipaddr = ips.First().MapToIPv4().ToString();
+        _logger.LogInformation(1, $"PlanningService responding from {_ipaddr}");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -27,7 +32,7 @@ public class Worker : BackgroundService
 
         var factory = new ConnectionFactory
         {
-            HostName = _hostName
+            HostName = "localhost"
         };
         
         using var connection = factory.CreateConnection();
@@ -59,6 +64,7 @@ public class Worker : BackgroundService
             // Tjekker om filen eksisterer og om den er tom
             if (!File.Exists(Path.Combine(_filePath, "planListe.csv")) || new FileInfo(Path.Combine(_filePath, "planListe.csv")).Length == 0)
             {
+                _logger.LogInformation("Ny planListe.csv fil oprettet: {0}", DateTime.Now);
                 // Laver en ny "planListe.csv" fil på stien
                 using (StreamWriter outputFile = new StreamWriter(Path.Combine(_filePath, "planListe.csv")))
                 {
@@ -71,6 +77,7 @@ public class Worker : BackgroundService
             // StreamWriter til at sende skrive i .CSV-filen
             using (StreamWriter outputFile = new StreamWriter(Path.Combine(_filePath, "planListe.csv"), true))
             {
+                _logger.LogInformation("Ny booking skrevet i planListe.csv");
                 // Laver en ny linje med det tilsendte data og lukker filen.
                 outputFile.WriteLineAsync($"{plan.KundeNavn},{plan.StartTidspunkt},{plan.StartSted},{plan.SlutSted}");
                 outputFile.Close();
