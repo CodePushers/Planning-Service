@@ -32,7 +32,7 @@ public class Worker : BackgroundService
 
         var factory = new ConnectionFactory
         {
-            HostName = "localhost"
+            HostName = _hostName
         };
         
         using var connection = factory.CreateConnection();
