@@ -9,9 +9,15 @@
 
   <ItemGroup>
     <PackageReference Include="RabbitMQ.Client" Version="6.4.0" />
+    <PackageReference Include="NLog" Version="5.1.3" />
+    <PackageReference Include="NLog.Web.AspNetCore" Version="5.2.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\shared\shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="NLog" />
+    <None Remove="NLog.Web.AspNetCore" />
   </ItemGroup>
 </Project>
