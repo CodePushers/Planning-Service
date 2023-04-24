@@ -38,12 +38,21 @@ public class Worker : BackgroundService
         using var connection = factory.CreateConnection();
         using var channel = connection.CreateModel();
 
+        channel.ExchangeDeclare(exchange: "FleetService", type: ExchangeType.Topic);
+
+        var queueName = channel.QueueDeclare().QueueName;
+
         // Opretter en kø "hello" hvis den ikke allerede findes i vores rabbitmq-server
-        channel.QueueDeclare(queue: "hello",
-                                durable: false,
-                                exclusive: false,
-                                autoDelete: false,
-                                arguments: null);
+        //channel.QueueDeclare(queue: "hello",
+        //                        durable: false,
+        //                        exclusive: false,
+        //                        autoDelete: false,
+        //                        arguments: null);
+
+            channel.QueueBind(queue: queueName,
+                              exchange: "FleetService",
+                              routingKey: "PlanDTO");
+        
 
         _logger.LogInformation("[*] Waiting for messages.");
 
@@ -85,7 +94,7 @@ public class Worker : BackgroundService
 
         };
 
-        channel.BasicConsume(queue: "hello",
+        channel.BasicConsume(queue: queueName,
                                 autoAck: true,
                                 consumer: consumer);
 
