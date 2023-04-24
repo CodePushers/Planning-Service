@@ -20,5 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Model\" />
+    <None Include="NLog.config">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>
