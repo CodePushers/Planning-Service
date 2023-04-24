@@ -52,7 +52,6 @@ public class Worker : BackgroundService
             channel.QueueBind(queue: queueName,
                               exchange: "FleetService",
                               routingKey: "PlanDTO");
-        
 
         _logger.LogInformation("[*] Waiting for messages.");
 
