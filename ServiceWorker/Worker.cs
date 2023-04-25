@@ -17,7 +17,7 @@ public class Worker : BackgroundService
         // Henter miljø variabel "FilePath" og "HostnameRabbit" fra docker-compose
         _filePath = config["FilePath"] ?? "/srv";
         _hostName = config["HostnameRabbit"];
-    
+
         _logger.LogInformation($"Filepath: {_filePath}");
         _logger.LogInformation($"Connection: {_hostName}");
 
@@ -34,7 +34,7 @@ public class Worker : BackgroundService
         {
             HostName = _hostName
         };
-        
+
         using var connection = factory.CreateConnection();
         using var channel = connection.CreateModel();
 
@@ -42,16 +42,17 @@ public class Worker : BackgroundService
 
         var queueName = channel.QueueDeclare().QueueName;
 
-        // Opretter en kø "hello" hvis den ikke allerede findes i vores rabbitmq-server
-        //channel.QueueDeclare(queue: "hello",
-        //                        durable: false,
-        //                        exclusive: false,
-        //                        autoDelete: false,
-        //                        arguments: null);
+        channel.QueueBind(queue: queueName,
+                    exchange: "FleetService",
+                    routingKey: "PlanDTO");
 
-            channel.QueueBind(queue: queueName,
-                              exchange: "FleetService",
-                              routingKey: "PlanDTO");
+        channel.QueueBind(queue: queueName,
+                    exchange: "FleetService",
+                    routingKey: "ServiceDTO");
+
+        channel.QueueBind(queue: queueName,
+                    exchange: "FleetService",
+                    routingKey: "ReparationDTO");
 
         _logger.LogInformation("[*] Waiting for messages.");
 
@@ -64,32 +65,96 @@ public class Worker : BackgroundService
             var body = ea.Body.ToArray();
             var message = Encoding.UTF8.GetString(body);
 
-            // Deserialiserer det indsendte data om til C# objekt
-            PlanDTO? plan = JsonSerializer.Deserialize<PlanDTO>(message);
+            _logger.LogInformation($"Routingkey for modtaget besked: {ea.RoutingKey}");
 
-            _logger.LogInformation($"[*] Plan modtaget:\n\tKundenavn: {plan.KundeNavn}\n\tStarttidspunkt: {plan.StartTidspunkt}\n\tStartsted: {plan.StartSted}\n\tEndested: {plan.SlutSted}");
-
-            // Tjekker om filen eksisterer og om den er tom
-            if (!File.Exists(Path.Combine(_filePath, "planListe.csv")) || new FileInfo(Path.Combine(_filePath, "planListe.csv")).Length == 0)
+            if (ea.RoutingKey == "PlanDTO")
             {
-                _logger.LogInformation("Ny planListe.csv fil oprettet: {0}", DateTime.Now);
-                // Laver en ny "planListe.csv" fil på stien
-                using (StreamWriter outputFile = new StreamWriter(Path.Combine(_filePath, "planListe.csv")))
+                // Deserialiserer det indsendte data om til C# objekt
+                PlanDTO? plan = JsonSerializer.Deserialize<PlanDTO>(message);
+
+                _logger.LogInformation($"[*] Plan modtaget:\n\tKundenavn: {plan.KundeNavn}\n\tStarttidspunkt: {plan.StartTidspunkt}\n\tStartsted: {plan.StartSted}\n\tEndested: {plan.SlutSted}");
+
+                // Tjekker om filen eksisterer og om den er tom
+                if (!File.Exists(Path.Combine(_filePath, "planListe.csv")) || new FileInfo(Path.Combine(_filePath, "planListe.csv")).Length == 0)
                 {
-                    // Opretter headeren i filen og lukker den
-                    outputFile.WriteLine("Kundenavn,Starttidspunkt,Startsted,Slutsted");
+                    _logger.LogInformation("Ny planListe.csv fil oprettet: {0}", DateTime.Now);
+                    // Laver en ny "planListe.csv" fil på stien
+                    using (StreamWriter outputFile = new StreamWriter(Path.Combine(_filePath, "planListe.csv")))
+                    {
+                        // Opretter headeren i filen og lukker den
+                        outputFile.WriteLine("Kundenavn,Starttidspunkt,Startsted,Slutsted");
+                        outputFile.Close();
+                    }
+                }
+
+                // StreamWriter til at sende skrive i .CSV-filen
+                using (StreamWriter outputFile = new StreamWriter(Path.Combine(_filePath, "planListe.csv"), true))
+                {
+                    _logger.LogInformation("Ny booking skrevet i planListe.csv");
+                    // Laver en ny linje med det tilsendte data og lukker filen.
+                    outputFile.WriteLineAsync($"{plan.KundeNavn},{plan.StartTidspunkt},{plan.StartSted},{plan.SlutSted}");
+                    outputFile.Close();
+                }
+            }
+            else if (ea.RoutingKey == "ServiceDTO")
+            {
+                // Deserialiserer det indsendte data om til C# objekt
+                AnmodningDTO? plan = JsonSerializer.Deserialize<AnmodningDTO>(message);
+
+                _logger.LogInformation($"[*] Service plan modtaget:\n\tAnmodningID: {plan.AnmodningID}\n\tKøretøjID: {plan.KøretøjID}\n\tBeskrivelse: {plan.Beskrivelse}\n\tOpgavetype: {plan.OpgaveType}\n\tIndsender: {plan.Indsender}");
+
+                // Tjekker om filen eksisterer og om den er tom
+                if (!File.Exists(Path.Combine(_filePath, "servicePlan.csv")) || new FileInfo(Path.Combine(_filePath, "servicePlan.csv")).Length == 0)
+                {
+                    _logger.LogInformation("Ny servicePlan.csv fil oprettet: {0}", DateTime.Now);
+                    // Laver en ny "servicePlan.csv" fil på stien
+                    using (StreamWriter outputFile = new StreamWriter(Path.Combine(_filePath, "servicePlan.csv")))
+                    {
+                        // Opretter headeren i filen og lukker den
+                        outputFile.WriteLine("AnmodningID,KøretøjID,Beskrivelse,Indsender,Opgavetype");
+                        outputFile.Close();
+                    }
+                }
+
+                // StreamWriter til at sende skrive i .CSV-filen
+                using (StreamWriter outputFile = new StreamWriter(Path.Combine(_filePath, "servicePlan.csv"), true))
+                {
+                    _logger.LogInformation("Ny anmodning skrevet i servicePlan.csv");
+                    // Laver en ny linje med det tilsendte data og lukker filen.
+                    outputFile.WriteLineAsync($"{plan.AnmodningID},{plan.KøretøjID},{plan.Beskrivelse},{plan.Indsender},{plan.OpgaveType}");
+                    outputFile.Close();
+                }
+            }
+            else if (ea.RoutingKey == "ReparationDTO")
+            {
+                // Deserialiserer det indsendte data om til C# objekt
+                AnmodningDTO? plan = JsonSerializer.Deserialize<AnmodningDTO>(message);
+
+                _logger.LogInformation($"[*] Reparations plan modtaget:\n\tAnmodningID: {plan.AnmodningID}\n\tKøretøjID: {plan.KøretøjID}\n\tBeskrivelse: {plan.Beskrivelse}\n\tOpgavetype: {plan.OpgaveType}\n\tIndsender: {plan.Indsender}");
+
+                // Tjekker om filen eksisterer og om den er tom
+                if (!File.Exists(Path.Combine(_filePath, "reparationPlan.csv")) || new FileInfo(Path.Combine(_filePath, "reparationPlan.csv")).Length == 0)
+                {
+                    _logger.LogInformation("Ny reparationPlan.csv fil oprettet: {0}", DateTime.Now);
+                    // Laver en ny "reparationPlan.csv" fil på stien
+                    using (StreamWriter outputFile = new StreamWriter(Path.Combine(_filePath, "reparationPlan.csv")))
+                    {
+                        // Opretter headeren i filen og lukker den
+                        outputFile.WriteLine("AnmodningID,KøretøjID,Beskrivelse,Indsender,Opgavetype");
+                        outputFile.Close();
+                    }
+                }
+
+                // StreamWriter til at sende skrive i .CSV-filen
+                using (StreamWriter outputFile = new StreamWriter(Path.Combine(_filePath, "reparationPlan.csv"), true))
+                {
+                    _logger.LogInformation("Ny anmodning skrevet i reparationPlan.csv");
+                    // Laver en ny linje med det tilsendte data og lukker filen.
+                    outputFile.WriteLineAsync($"{plan.AnmodningID},{plan.KøretøjID},{plan.Beskrivelse},{plan.Indsender},{plan.OpgaveType}");
                     outputFile.Close();
                 }
             }
 
-            // StreamWriter til at sende skrive i .CSV-filen
-            using (StreamWriter outputFile = new StreamWriter(Path.Combine(_filePath, "planListe.csv"), true))
-            {
-                _logger.LogInformation("Ny booking skrevet i planListe.csv");
-                // Laver en ny linje med det tilsendte data og lukker filen.
-                outputFile.WriteLineAsync($"{plan.KundeNavn},{plan.StartTidspunkt},{plan.StartSted},{plan.SlutSted}");
-                outputFile.Close();
-            }
 
         };
 
